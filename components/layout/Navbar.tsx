@@ -12,11 +12,11 @@ export default function Navbar() {
   const navLinks = [
     { label: "Home", href: "/" },
     { label: "Learning Path", href: "/learning-path" },
-    { label: "Challenges", href: "/challenges" },
-    { label: "My Courses", href: "/courses" },
-    { label: "Achievements", href: "/achievements" },
-    { label: "Buddy", href: "/buddy" },
-    { label: "Lexicon", href: "/lexicon" },
+    { label: "Challenges", href: "/coming-soon?feature=Challenges" },
+    { label: "My Courses", href: "/coming-soon?feature=My%20Courses" },
+    { label: "Achievements", href: "/coming-soon?feature=Achievements" },
+    { label: "Buddy", href: "/coming-soon?feature=AI%20Buddy" },
+    { label: "Lexicon", href: "/coming-soon?feature=ML%20Lexicon" },
   ];
 
   return (

@@ -54,7 +54,7 @@ export default function LearningPath() {
       title: "Decision Trees",
       description: "Making choices step by step",
       status: "locked",
-      link: "#",
+      link: "/coming-soon?feature=Decision%20Trees",
       topics: ["Tree Structure", "Splitting", "Pruning"],
       realWorld: "Medical diagnosis, Credit scoring, Recommendations",
       difficulty: "Intermediate",
@@ -67,7 +67,7 @@ export default function LearningPath() {
       title: "Reinforcement Learning",
       description: "Learning by trial and error",
       status: "locked",
-      link: "#",
+      link: "/coming-soon?feature=Reinforcement%20Learning",
       topics: ["Rewards", "Policies", "Q-Learning"],
       realWorld: "Game playing, Robotics, Self-driving cars",
       difficulty: "Advanced",
@@ -255,10 +255,12 @@ export default function LearningPath() {
                           </Button>
                         </Link>
                       ) : (
-                        <Button variant="ghost" disabled className="w-full text-muted-foreground">
-                          <Lock className="h-4 w-4 mr-2" />
-                          Complete previous modules to unlock
-                        </Button>
+                        <Link href={module.link}>
+                          <Button variant="outline" className="w-full text-muted-foreground border-dashed">
+                            <Lock className="h-4 w-4 mr-2" />
+                            Coming Soon - Click to Learn More
+                          </Button>
+                        </Link>
                       )}
                     </div>
                   </CardContent>
@@ -281,13 +283,17 @@ export default function LearningPath() {
               Show the world what you've learned!
             </p>
             <div className="flex gap-3 justify-center flex-wrap">
-              <Button variant="outline" size="lg" className="border-2 border-purple-500/50">
-                View Requirements
-              </Button>
-              <Button size="lg" className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700" disabled>
-                <Award className="h-5 w-5 mr-2" />
-                Get Certificate
-              </Button>
+              <Link href="/coming-soon?feature=Certificate%20Requirements">
+                <Button variant="outline" size="lg" className="border-2 border-purple-500/50">
+                  View Requirements
+                </Button>
+              </Link>
+              <Link href="/coming-soon?feature=ML%20Certificate">
+                <Button size="lg" className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700">
+                  <Award className="h-5 w-5 mr-2" />
+                  Get Certificate
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
