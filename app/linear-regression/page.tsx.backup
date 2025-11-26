@@ -1,0 +1,503 @@
+'use client';
+
+import { useState } from 'react';
+import { Lightbulb, ChevronLeft } from "lucide-react";
+import Link from "next/link";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import ScatterChart from "@/components/ScatterChart";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useTrainModel } from "@/hooks/useLinearRegression";
+import { useToast } from "@/hooks/use-toast";
+import type { TrainingResult } from "@shared/schema";
+import { LinearRegressionChart, CostChart, ParameterChart } from "@/components/learning/Charts";
+import CSVUpload from "@/components/learning/CSVUpload";
+import ModelComparison from "@/components/learning/ModelComparison";
+import GraphContainer from "@/components/learning/GraphContainer";
+import IterationControls from "@/components/learning/IterationControls";
+import SliderControl from "@/components/shared/SliderControl";
+import { ExportResults } from "@/components/learning/ExportResults";
+
+export default function LinearRegression() {
+  // State for interactive Visual Representation sliders
+  const [intercept, setIntercept] = useState(20);
+  const [slope, setSlope] = useState(3);
+  
+  // State for model building
+  const [learningRate, setLearningRate] = useState(0.05);
+  const [iterations, setIterations] = useState(100);
+  const [dataset, setDataset] = useState("sales-revenue");
+  const [currentIteration, setCurrentIteration] = useState(0);
+  const [modelBuilt, setModelBuilt] = useState(false);
+  const [trainingResult, setTrainingResult] = useState<TrainingResult | null>(null);
+  const [customData, setCustomData] = useState<Array<{ x: number; y: number }> | null>(null);
+  const [useCustomData, setUseCustomData] = useState(false);
+  
+  const { toast } = useToast();
+
+  // Data for the interactive chart (study hours vs exam scores)
+  const studyData = [
+    { x: 1, y: 45 },
+    { x: 2, y: 51 },
+    { x: 3, y: 54 },
+    { x: 4, y: 60 },
+    { x: 5, y: 65 },
+    { x: 6, y: 70 },
+    { x: 7, y: 75 },
+    { x: 8, y: 82 },
+  ];
+
+  // Calculate Mean Squared Error
+  const calculateMSE = () => {
+    const predictions = studyData.map(point => intercept + slope * point.x);
+    const errors = studyData.map((point, i) => Math.pow(point.y - predictions[i], 2));
+    const mse = errors.reduce((sum, error) => sum + error, 0) / errors.length;
+    return mse.toFixed(2);
+  };
+  const trainModel = useTrainModel();
+
+  const handleBuildModel = async () => {
+    try {
+      const result = await trainModel.mutateAsync({
+        learningRate,
+        iterations,
+        datasetName: useCustomData ? "custom" : dataset,
+        customData: useCustomData ? customData : undefined,
+      });
+      
+      setTrainingResult(result);
+      setModelBuilt(true);
+      setCurrentIteration(iterations);
+      
+      toast({
+        title: "Model trained successfully!",
+        description: `Final cost: ${result.finalCost.toFixed(4)}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Training failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCustomDataLoaded = (data: Array<{ x: number; y: number }>) => {
+    setCustomData(data);
+    setUseCustomData(true);
+    setModelBuilt(false);
+    setTrainingResult(null);
+  };
+
+  const handleDatasetChange = (value: string) => {
+    setDataset(value);
+    setUseCustomData(false);
+    setModelBuilt(false);
+    setTrainingResult(null);
+  };
+
+  const handleResetModel = () => {
+    setModelBuilt(false);
+    setCurrentIteration(0);
+    setTrainingResult(null);
+  };
+
+  const handleResetIteration = () => {
+    setCurrentIteration(0);
+  };
+
+  const handlePrevious = () => {
+    if (currentIteration > 0) {
+      setCurrentIteration((prev) => Math.max(0, prev - Math.floor(iterations / 10)));
+    }
+  };
+
+  const handleNext = () => {
+    if (currentIteration < iterations) {
+      setCurrentIteration((prev) => Math.min(iterations, prev + Math.floor(iterations / 10)));
+    }
+  };
+  
+  // Get current state based on iteration
+  const getCurrentState = () => {
+    if (!trainingResult || !trainingResult.history) return null;
+    return trainingResult.history[currentIteration] || trainingResult.history[trainingResult.history.length - 1];
+  };
+  
+  const currentState = getCurrentState();
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      
+      {/* Breadcrumb */}
+      <div className="container mx-auto px-6 pt-6">
+        <div className="flex items-center gap-2 text-sm">
+          <Link href="/" className="text-primary hover:underline">Home</Link>
+          <span className="text-muted-foreground">›</span>
+          <Link href="/learning-path" className="text-primary hover:underline">Learning Path</Link>
+          <span className="text-muted-foreground">›</span>
+          <span className="text-muted-foreground">...</span>
+          <span className="text-muted-foreground">›</span>
+          <span className="text-primary">Content</span>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-6 py-12 max-w-6xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-pink-400 via-pink-500 to-purple-500 bg-clip-text text-transparent mb-8">
+            Introduction to Linear Regression
+          </h1>
+          
+          {/* Progress Bar */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-foreground mb-2">Module progress: 2 / 5</p>
+              <div className="w-64 h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-pink-500 to-pink-400" style={{width: '40%'}}></div>
+              </div>
+            </div>
+            <Link href="/learning-path">
+              <button className="px-6 py-2 border-2 border-border rounded-lg text-foreground hover:bg-accent transition-colors flex items-center gap-2">
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        <ContentCard testId="card-section-1">
+          <div className="space-y-6">
+            <SectionHeader number={1} title="What is Linear Regression?" />
+            <div className="space-y-4 pl-12">
+              <p className="text-base leading-relaxed text-foreground" data-testid="text-lr-description">
+                Linear Regression is one of the most fundamental and widely used
+                techniques in the field of machine learning and statistics. At its
+                core, it's a method for modeling the relationship between a{" "}
+                <span className="font-semibold text-primary">
+                  dependent variable
+                </span>{" "}
+                (often denoted as Y) and one or more{" "}
+                <span className="font-semibold text-primary">
+                  independent variables
+                </span>{" "}
+                (X) by fitting a linear equation to the observed data.
+              </p>
+
+              <div className="rounded-lg border-l-4 border-primary bg-accent p-4" data-testid="box-definition">
+                <h3 className="mb-2 font-semibold text-primary" data-testid="heading-definition">Definition:</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground" data-testid="text-definition">
+                  Linear Regression is a{" "}
+                  <span className="font-semibold text-primary">
+                    supervised learning
+                  </span>{" "}
+                  algorithm that predicts a continuous output value based on one or
+                  more input{" "}
+                  <span className="font-semibold text-primary">features</span>,
+                  assuming a linear relationship between the inputs and the output.
+                </p>
+              </div>
+            </div>
+          </div>
+        </ContentCard>
+
+        <ContentCard testId="card-section-3">
+          <div className="space-y-6">
+            <SectionHeader number={3} title="Intuition behind LR" />
+            <div className="space-y-4 pl-12">
+              <p className="text-base leading-relaxed text-foreground" data-testid="text-intuition-intro">
+                Imagine you're trying to understand the relationship between study
+                hours and exam scores. Intuitively, you might expect that more study
+                hours lead to higher scores. Linear Regression formalizes this
+                intuition by finding the straight line that best represents this
+                relationship.
+              </p>
+
+              <GraphContainer title="Relationship Between Study Hours and Exam Scores">
+                <LinearRegressionChart
+                  data={[
+                    { x: 1, y: 55 },
+                    { x: 2, y: 60 },
+                    { x: 3, y: 65 },
+                    { x: 4, y: 70 },
+                    { x: 5, y: 75 },
+                    { x: 6, y: 80 },
+                    { x: 7, y: 85 },
+                    { x: 8, y: 90 },
+                  ]}
+                  predictionLine={Array.from({ length: 100 }, (_, i) => {
+                    const x = 1 + i * 7 / 99;
+                    return { x, y: 50 + 5 * x };
+                  })}
+                />
+              </GraphContainer>
+
+              <p className="text-sm text-muted-foreground" data-testid="text-graph-explanation">
+                In the graph above, each point represents a student's study hours
+                (x-axis) and their exam score (y-axis). The straight line is the
+                "best fit" line that minimizes the distance between itself and all
+                the data points.
+              </p>
+            </div>
+          </div>
+        </ContentCard>
+
+        <ContentCard testId="card-section-7">
+          <div className="space-y-6">
+            <SectionHeader number={7} title="Visual Representation" />
+            <div className="space-y-6 pl-12">
+              <p className="text-base leading-relaxed text-foreground" data-testid="text-visual-intro">
+                Let's explore how changing the intercept and slope affects our
+                regression line:
+              </p>
+
+              <InteractiveVisualization />
+            </div>
+          </div>
+        </ContentCard>
+
+        <ContentCard testId="card-section-9">
+          <div className="space-y-6">
+            <SectionHeader number={9} title="Choose the Hyperparameters" />
+            <div className="space-y-6 pl-12">
+              <p className="text-base leading-relaxed text-foreground" data-testid="text-hyperparameters-intro">
+                Experiment with different hyperparameter combinations to see how they
+                affect model training:
+              </p>
+
+              <HyperparameterTable />
+
+              <TipCard type="tip" title="Pro Tip">
+                If the cost function plot oscillates or increases, try reducing the learning rate.
+                A good starting point is 0.01 to 0.05 for most datasets.
+              </TipCard>
+
+              <TipCard type="trick" title="Quick Trick">
+                Want faster convergence? Increase the learning rate slightly, but watch out for oscillations!
+                The sweet spot is where cost decreases smoothly and quickly.
+              </TipCard>
+
+              {/* CSV Upload Feature - New Addition by Jayanarayan */}
+              <div className="rounded-lg border-2 border-cyan-500/30 bg-cyan-500/5 p-6 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">
+                    ✨ NEW FEATURE
+                  </span>
+                  <span className="text-xs bg-cyan-600 text-white px-2 py-1 rounded">Custom Data Upload</span>
+                </div>
+                <h3 className="font-semibold text-foreground">Upload Your Own Dataset (CSV)</h3>
+                <p className="text-sm text-muted-foreground">
+                  Train the model on your own data! Upload a CSV file with x,y coordinates.
+                </p>
+                <CSVUpload onDataLoaded={handleCustomDataLoaded} />
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-3 md:gap-4">
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground" data-testid="label-dataset">
+                    Dataset for Model:
+                  </label>
+                  <Select value={dataset} onValueChange={handleDatasetChange}>
+                    <SelectTrigger data-testid="select-dataset-trigger">
+                      <SelectValue data-testid="select-dataset-value" />
+                    </SelectTrigger>
+                    <SelectContent data-testid="select-dataset-content">
+                      <SelectItem value="sales-revenue" data-testid="select-option-sales-revenue">Sales Revenue</SelectItem>
+                      <SelectItem value="salary-experience" data-testid="select-option-salary-experience">
+                        Salary vs Experience
+                      </SelectItem>
+                      <SelectItem value="house-prices" data-testid="select-option-house-prices">House Prices</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {useCustomData && (
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      ✓ Using custom uploaded data
+                    </p>
+                  )}
+                </div>
+
+                <SliderControl
+                  label={`Learning Rate (α): ${learningRate.toFixed(3)}`}
+                  value={learningRate}
+                  min={0.001}
+                  max={0.1}
+                  step={0.001}
+                  onChange={setLearningRate}
+                  displayValue={learningRate.toFixed(3)}
+                />
+
+                <SliderControl
+                  label={`Iterations: ${iterations}`}
+                  value={iterations}
+                  min={50}
+                  max={500}
+                  step={10}
+                  onChange={setIterations}
+                  displayValue={iterations.toString()}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-4 justify-between items-center">
+                <ExportResults
+                  trainingResult={trainingResult}
+                  learningRate={learningRate}
+                  iterations={iterations}
+                  dataset={dataset}
+                />
+                <div className="flex flex-wrap gap-4">
+                  <Button
+                    onClick={handleBuildModel}
+                    variant="default"
+                    size="default"
+                    disabled={trainModel.isPending}
+                    data-testid="button-build-model"
+                  >
+                    {trainModel.isPending ? "Training..." : "Build Model"}
+                  </Button>
+                  <Button
+                    onClick={handleResetModel}
+                    variant="destructive"
+                    size="default"
+                    disabled={trainModel.isPending}
+                    data-testid="button-reset-model"
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+
+              {/* Model Comparison Feature - New Addition by Jayanarayan */}
+              <div className="rounded-lg border-2 border-blue-500/30 bg-blue-500/5 p-6 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                    ✨ NEW FEATURE
+                  </span>
+                  <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Performance Comparison</span>
+                </div>
+                <h3 className="font-semibold text-foreground">Compare Model Configurations</h3>
+                <p className="text-sm text-muted-foreground">
+                  Save and compare different hyperparameter combinations to find the best performing model.
+                </p>
+                <ModelComparison
+                  currentResult={trainingResult}
+                  learningRate={learningRate}
+                  iterations={iterations}
+                  dataset={useCustomData ? "Custom Data" : dataset}
+                />
+              </div>
+            </div>
+          </div>
+        </ContentCard>
+
+        {modelBuilt && trainingResult && (
+          <ContentCard testId="card-section-4">
+            <div className="space-y-6">
+              <SectionHeader number={4} title="Model's Growth" />
+              <div className="space-y-6 pl-12">
+                <div className="rounded-lg bg-primary/10 p-4" data-testid="box-model-success">
+                  <p className="text-sm font-medium text-foreground text-center mb-4" data-testid="text-model-success">
+                    Model built successfully. Use the controls to navigate through{" "}
+                    {iterations} iterations of training.
+                  </p>
+                  {currentState && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Iteration</p>
+                        <p className="text-lg font-bold text-primary">{currentState.iteration}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">θ₀ (Intercept)</p>
+                        <p className="text-lg font-bold text-primary">{currentState.theta0.toFixed(4)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">θ₁ (Slope)</p>
+                        <p className="text-lg font-bold text-primary">{currentState.theta1.toFixed(4)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Cost</p>
+                        <p className="text-lg font-bold text-primary">{currentState.cost.toFixed(4)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <IterationControls
+                  currentIteration={currentIteration}
+                  maxIterations={iterations}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  onReset={handleResetIteration}
+                  onIterationChange={setCurrentIteration}
+                />
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  <GraphContainer
+                    title={`Linear Regression Model (Iteration ${currentIteration})`}
+                  >
+                    {currentState && trainingResult.dataset && (
+                      <LinearRegressionChart
+                        data={trainingResult.dataset}
+                        predictionLine={
+                          currentState.theta0 !== undefined && currentState.theta1 !== undefined
+                            ? Array.from({ length: 100 }, (_, i) => {
+                                const x = Math.min(...trainingResult.dataset.map(p => p.x)) + 
+                                         i * (Math.max(...trainingResult.dataset.map(p => p.x)) - 
+                                              Math.min(...trainingResult.dataset.map(p => p.x))) / 99;
+                                return {
+                                  x,
+                                  y: currentState.theta0 + currentState.theta1 * x,
+                                };
+                              })
+                            : undefined
+                        }
+                      />
+                    )}
+                  </GraphContainer>
+                  <GraphContainer
+                    title="Cost Function over Iterations"
+                  >
+                    {trainingResult.history && (
+                      <CostChart
+                        data={trainingResult.history.slice(0, currentIteration + 1).map((state) => ({
+                          x: state.iteration,
+                          y: state.cost,
+                        }))}
+                      />
+                    )}
+                  </GraphContainer>
+                </div>
+                
+                <GraphContainer
+                  title="Parameter Evolution over Iterations"
+                >
+                  {trainingResult.history && (
+                    <ParameterChart
+                      theta0Data={trainingResult.history.slice(0, currentIteration + 1).map((state) => ({
+                        x: state.iteration,
+                        y: state.theta0,
+                      }))}
+                      theta1Data={trainingResult.history.slice(0, currentIteration + 1).map((state) => ({
+                        x: state.iteration,
+                        y: state.theta1,
+                      }))}
+                    />
+                  )}
+                </GraphContainer>
+              </div>
+            </div>
+          </ContentCard>
+        )}
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
