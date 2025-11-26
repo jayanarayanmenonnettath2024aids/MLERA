@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, ArrowLeft, Rocket, Construction } from "lucide-react";
 
-export default function ComingSoon() {
+function ComingSoonContent() {
   const searchParams = useSearchParams();
   const feature = searchParams.get("feature") || "This Feature";
 
@@ -124,5 +125,19 @@ export default function ComingSoon() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function ComingSoon() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-500 border-r-transparent"></div>
+        </div>
+      </div>
+    }>
+      <ComingSoonContent />
+    </Suspense>
   );
 }
